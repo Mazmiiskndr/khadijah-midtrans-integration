@@ -4,6 +4,7 @@ namespace Database\Factories;
 
 use App\Models\Color;
 use Illuminate\Database\Eloquent\Factories\Factory;
+use Illuminate\Support\Facades\File;
 use Illuminate\Support\Facades\Storage;
 use Intervention\Image\ImageManagerStatic as Image;
 /**
@@ -21,10 +22,18 @@ class ProductFactory extends Factory
         $categoryId = $this->faker->randomElement(range(1, 20));
         $productName = ucwords($this->faker->words(3, true));
         // Image URL
-        $imageUrl = 'https://source.unsplash.com/random/1500x1500/?fashion';
+        $imageUrl = 'https://source.unsplash.com/random/1500x1500/';
+
+        // Nonaktif SSL
+        $context = stream_context_create([
+            "ssl" => [
+                "verify_peer" => false,
+                "verify_peer_name" => false,
+            ],
+        ]);
 
         // Download Image
-        $imageData = file_get_contents($imageUrl);
+        $imageData = file_get_contents($imageUrl, false,$context);;
 
         // Convert Image to .webp
         $ext = 'webp';
@@ -42,7 +51,14 @@ class ProductFactory extends Factory
         }
 
         // Resize image to reduce file size and save Image to Storage
-        $imageConvert->save(storage_path('app/public/assets/images/products/') . $fileName, $compressionLevel);
+        $targetPath = storage_path('app/public/assets/images/products/');
+
+        if (!File::isDirectory($targetPath)) {
+            File::makeDirectory($targetPath, 0777, true, true);
+        }
+
+        $imageConvert->save($targetPath . $fileName, $compressionLevel);
+
 
         // Get a list of color names from the 'colors' table
         $colorNames = Color::pluck('color_name')->toArray();

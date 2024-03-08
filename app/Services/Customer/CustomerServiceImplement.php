@@ -35,7 +35,6 @@ class CustomerServiceImplement extends Service implements CustomerService
         }
     }
 
-
     /**
      * findByUid
      * @param  mixed $uid

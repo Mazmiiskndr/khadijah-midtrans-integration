@@ -39,8 +39,9 @@
     <!--section end-->
 
     {{-- TODO: --}}
-    {{-- @push('scripts')
-    <script>
+    @push('scripts')
+
+    {{-- <script>
         window.addEventListener('delete-cart-detail-show-confirmation', event =>{
                     Swal.fire({
                         title: 'Apakah kamu yakin?',
@@ -57,6 +58,7 @@
                     }
                 })
             });
-    </script>
-    @endpush --}}
+    </script> --}}
+    @endpush
 </x-frontend.master>
+

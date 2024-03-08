@@ -6,11 +6,9 @@
                 $totalPrice = 0;
                 @endphp
                 @foreach ($products as $productDetail)
-                {{-- {{ dd($productDetail['product']->thumbnail); }} --}}
                 <div class="row product-order-detail">
                     <div class="col-2">
-                        <img src="{{ asset('storage/'.$productDetail['product']->thumbnail) }}" alt=""
-                            class="img-fluid blur-up lazyload">
+                        <img src="{{ $productDetail['product']->thumbnail ? asset('storage/'.$productDetail['product']->thumbnail) : '' }}" alt="" class="img-fluid blur-up lazyload">
                     </div>
                     <div class="col-5 order_detail">
                         <div>
@@ -33,8 +31,7 @@
                             $orderStatuses['ORDER_COMPLETED'] ==
                             $orders->order_status)
                             {{-- TODO: --}}
-                            <button type="button" class="btn-solid btn-sm mt-3" style="padding: 2px 9px"
-                                wire:click="showRatingModal('{{ $productDetail['product']->product_uid }}')">
+                            <button type="button" class="btn-solid btn-sm mt-3" style="padding: 2px 9px" wire:click="showRatingModal('{{ $productDetail['product']->product_uid }}')">
                                 <i class="fas fa-star"></i>
                                 Beri Penilaian
                             </button>
@@ -99,12 +96,10 @@
                         <div class="delivery-sec">
                             <h3>Status Order : <span class="{{ 'text-' . $colors }}">{{ $orders->order_status }}</span>
                             </h3>
-                            <button type="button" class="btn-solid btn-sm mt-3"
-                                onclick="javascript:window.history.back(-1);return false;"><i
-                                    class="fas fa-backward"></i> Kembali</button>
+                            <button type="button" class="btn-solid btn-sm mt-3" onclick="javascript:window.history.back(-1);return false;"><i class="fas fa-backward"></i> Kembali</button>
                             @if($orderStatuses['PENDING_PAYMENT'] == $orders->order_status )
                             @if(strtoupper($orders->order_type) == "BANK")
-                            <button type="button" class="btn-solid btn-sm mt-3" wire:click="showPaymentModal">
+                            <button type="button" class="btn-solid btn-sm mt-3" id="pay-button">
                                 <i class="fas fa-credit-card"></i>
                                 Bayar
                             </button>
@@ -144,6 +139,40 @@
     {{-- END FORM RATING MODAL --}}
 
     @push('scripts')
+    <script type="text/javascript" src="https://app.sandbox.midtrans.com/snap/snap.js" data-client-key="{{ env("MIDTRANS_CLIENT_KEY") }}"></script>
+
+    <script type="text/javascript">
+        // For example trigger on button clicked, or any time you need
+        var payButton = document.getElementById('pay-button');
+
+        payButton.addEventListener('click', function() {
+            snap.pay('<?= $snapTokenMidtrans ?>', {
+                // Optional
+                onSuccess: function(result) {
+                    // Optional
+                    console.log('onSuccess');
+                    Livewire.emit('proccessPayment', result);
+                }, // Optional
+                onPending: function(result) {
+                    // Optional
+                    console.log('onPending');
+                    Livewire.emit('proccessPayment', result);
+                }, // Optional
+                onError: function(result) {
+                    // For example redirect to a specific URL
+                    console.log('onError');
+                    Livewire.emit('proccessPayment', result);
+                }, // Optional
+                onClose: function() {
+                    // Optional
+                    console.log('onClose');
+                    Livewire.emit('proccessPayment', result);
+                }
+            });
+
+        });
+
+    </script>
     <script>
         window.addEventListener('show-payment-modal', event => {
             $('#createPayment').modal('show');
@@ -153,7 +182,7 @@
             $('#createRating').modal('show');
         });
 
-        document.addEventListener('click', function (event) {
+        document.addEventListener('click', function(event) {
             if (event.target.id !== 'printInvoice') return;
 
             var uid = event.target.getAttribute('data-uid');
@@ -165,3 +194,4 @@
     @endpush
 
 </div>
+

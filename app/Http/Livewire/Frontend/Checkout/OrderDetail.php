@@ -5,26 +5,29 @@ namespace App\Http\Livewire\Frontend\Checkout;
 use App\Enums\OrderStatus;
 use App\Models\Order;
 use App\Models\OrderPromo;
+use App\Services\MidtransPayment\MidtransPaymentService;
 use App\Services\Order\OrderService;
 use Livewire\Component;
+use Midtrans\Snap;
+use Midtrans\Transaction;
 use ReflectionClass;
 
 class OrderDetail extends Component
 {
     // Define public properties
-    public $orderStatuses, $orderUid, $orders, $products, $shippingDetail, $colors, $promo;
+    public $orderStatuses, $orderUid, $orders, $products, $shippingDetail, $colors, $promo, $snapTokenMidtrans;
 
     protected $listeners = [
         'paymentUpdated' => 'handleUpdated',
         'ratingCreated' => 'handleUpdated',
+        'proccessPayment' => 'proccessPayment',
     ];
 
     /**
      * The function to be executed when the component is being created.
-     * @param  App\Services\OrderService  $orderService
      * @return void
      */
-    public function mount(OrderService $orderService)
+    public function mount(OrderService $orderService, MidtransPaymentService $midtransPaymentService)
     {
         $this->fetchOrderStatuses();
         $this->fetchOrderDetails($orderService);
@@ -32,8 +35,51 @@ class OrderDetail extends Component
         $this->extractProductsFromOrderDetails();
         $this->fetchShippingDetails();
 
+        $midtransPaymentService->initializeMidtransConfig();
+        try {
+            $status = Transaction::status($this->orders->order_uid);
+            $status = json_decode(json_encode($status), true);
+            $order = Order::where('order_uid', $this->orders->order_uid)->first();
+            if ($order) {
+                $order->update([
+                    'order_status' => ($status['transaction_status'] == "settlement") ? OrderStatus::ORDER_PROCESSING : OrderStatus::PENDING_PAYMENT,
+                ]);
+                $this->emit('paymentUpdated', $order);
+            }
+        } catch (\Exception $e) {
+            $params = [
+                'transaction_details' => [
+                    'order_id' => $this->orders->order_uid,
+                    'gross_amount' => $this->orders->total_price,
+                ],
+                'customer_details' => [
+                    'first_name' => $this->orders->receiver_name,
+                    'phone' => $this->orders->receiver_phone,
+                ],
+            ];
+
+            $this->snapTokenMidtrans = Snap::getSnapToken($params);
+        }
+
         // get color for order status
         $this->colors = $orderService->getColors($this->orders->order_status);
+    }
+
+    public function proccessPayment($data, MidtransPaymentService $midtransPaymentService)
+    {
+        $midtransPaymentService->initializeMidtransConfig();
+        $status = Transaction::status($this->orders->order_uid);
+        if ($status) {
+            $status = json_decode(json_encode($status), true);
+            $order = Order::where('order_uid', $this->orders->order_uid)->first();
+            if ($order) {
+                $order->update([
+                    'order_status' => ($status['transaction_status'] == "pending") ? OrderStatus::PENDING_PAYMENT : ($status['transaction_status'] == "settlement") ?? OrderStatus::ORDER_PROCESSING,
+                ]);
+            }
+            // Also, pass the order UID in the route parameters
+            redirect()->route('checkout.show', $this->orders->order_uid)->with('success', 'Perubahan status pembayaran berhasil dibuat.');
+        }
     }
 
     /**
@@ -65,7 +111,7 @@ class OrderDetail extends Component
      * @param  OrderService $orderService - The order service used to handle the order processes
      * @return void
      */
-    public function showRatingModal(OrderService $orderService,$product_uid)
+    public function showRatingModal(OrderService $orderService, $product_uid)
     {
         // Re-fetch the data
         $this->mount($orderService);
@@ -122,10 +168,10 @@ class OrderDetail extends Component
     {
         // First, check if the order_id exists in the order_promo table
         $orderPromoExists = OrderPromo::where('order_id', $this->orders->order_id)->exists();
-        if($orderPromoExists) {
+        if ($orderPromoExists) {
             // If the order_id does exist, fetch the OrderPromo and its associated promo and order
             $this->promo = OrderPromo::with('promo', 'order')->where('order_id', $this->orders->order_id)->first();
-        }else {
+        } else {
             $this->promo = null;
         }
     }
@@ -156,11 +202,9 @@ class OrderDetail extends Component
                 if (isset($orderDetail->product)) {
                     // Add the product to the products array along with the quantity
                     $this->products[] = ['product' => $orderDetail->product, 'price' => $orderDetail->price, 'quantity' => $orderDetail->quantity];
-
                 }
             }
         }
-
     }
 
     public function handleUpdated(OrderService $orderService)
@@ -168,5 +212,4 @@ class OrderDetail extends Component
         // Re-fetch the data
         $this->mount($orderService);
     }
-
 }

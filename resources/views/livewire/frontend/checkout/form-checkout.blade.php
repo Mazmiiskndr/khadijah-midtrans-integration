@@ -1,4 +1,4 @@
-<form wire:submit.prevent="storeCheckout" method="POST">
+<form wire:submit.prevent="storeCheckout" method="POST" id="payment-form">
     <div class="row">
         @if(count($carts) <= 0 ) <div class="alert alert-danger" style="margin-left: 5px;">
             Tidak ada produk di keranjang. Silakan tambahkan produk ke keranjang sebelum melakukan checkout.
@@ -89,8 +89,7 @@
                     <option value="">-- Pilih Paket --</option>
                     @if(!is_null($parcels))
                     @foreach($parcels as $parcel)
-                    <option value="{{ $parcel['service'] }}" ongkir="{{ $parcel['cost'][0]['value'] }}"
-                        estimasi="{{ ucwords($parcel['cost'][0]['etd']) . " Hari" }}">
+                    <option value="{{ $parcel['service'] }}" ongkir="{{ $parcel['cost'][0]['value'] }}" estimasi="{{ ucwords($parcel['cost'][0]['etd']) . " Hari" }}">
                         {{ $parcel['service'] . " - Rp. " . number_format($parcel['cost'][0]['value'],0,',','.') . "
                         - Estimasi " .
                         ucwords($parcel['cost'][0]['etd']) . " Hari" }}
@@ -175,15 +174,13 @@
                         <ul>
                             <li>
                                 <div class="radio-option">
-                                    <input type="radio" value="COD" wire:model="paymentMethod" name="payment-group"
-                                        id="payment-2">
+                                    <input type="radio" value="COD" wire:model="paymentMethod" name="payment-group" id="payment-2">
                                     <label for="payment-2">(COD) / Bayar di Tempat</label>
                                 </div>
                             </li>
                             <li>
                                 <div class="radio-option paypal">
-                                    <input type="radio" value="BANK" wire:model="paymentMethod" name="payment-group"
-                                        id="payment-3">
+                                    <input type="radio" value="BANK" wire:model="paymentMethod" name="payment-group" id="payment-3">
                                     <label for="payment-3">Pembayaran Melalui Bank</label>
                                 </div>
                             </li>
@@ -193,7 +190,7 @@
                             {{ $message }}
                         </div>
                         @enderror
-                        <div id="bank_dropdown" style="display: none;" wire:ignore>
+                        {{-- <div id="bank_dropdown" style="display: none;" wire:ignore>
                             <p style="color: black;"><b>Tujuan Transfer : </b></p>
                             <table class="table table-borderless table-hover">
                                 <tr>
@@ -201,7 +198,7 @@
                                     <th>:</th>
                                     <td>
                                         @isset($bank->provider)
-                                            {{ strtoupper($bank->provider) }}
+                                        {{ strtoupper($bank->provider) }}
                                         @endisset
                                     </td>
                                 </tr>
@@ -225,11 +222,12 @@
                                 </tr>
 
                             </table>
-                        </div>
+                        </div> --}}
                     </div>
                 </div>
                 <div class="text-end">
                     <button type="submit" class="btn-solid btn">Lanjutkan Pembayaran</button>
+                    <div id="snap-container"></div>
                 </div>
             </div>
         </div>
@@ -239,36 +237,42 @@
     @if (session()->has('success'))
     <script>
         Swal.fire({
-            position: 'top-end',
-            icon: 'success',
-            title: '{{ session('success') }}',
-            showConfirmButton: false,
-            timer: 1500
+            position: 'top-end'
+            , icon: 'success'
+            , title: '{{ session('
+            success ') }}'
+            , showConfirmButton: false
+            , timer: 1500
         });
+
     </script>
     @endif
     @if (session()->has('error'))
     <script>
         Swal.fire({
-            icon: 'error',
-            title: 'Oops...',
-            text: '{{ session('error') }}',
-        })
+            icon: 'error'
+            , title: 'Oops...'
+            , text: '{{ session('
+            error ') }}'
+        , })
+
     </script>
     @endif
 </form>
 
 @push('scripts')
 <script>
-    $(document).ready(function(){
-        $("input[name='payment-group']").click(function(){
+    $(document).ready(function() {
+        $("input[name='payment-group']").click(function() {
             var radioValue = $("input[name='payment-group']:checked").attr("id");
-            if(radioValue == "payment-3"){
+            if (radioValue == "payment-3") {
                 $("#bank_dropdown").show();
             } else {
                 $("#bank_dropdown").hide();
             }
         });
     });
+
 </script>
 @endpush
+

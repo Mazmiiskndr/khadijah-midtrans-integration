@@ -38,8 +38,7 @@ return new class extends Migration
 
             $table->foreign('category_id')
                     ->references('category_id')
-                    ->on('category')
-                    ->onDelete('set null');
+                    ->on('category');
         });
     }
 

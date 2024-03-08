@@ -28,6 +28,10 @@ class AppServiceProvider extends ServiceProvider
      */
     public function boot(ApiRajaOngkirService $apiRajaOngkirService)
     {
+        if ($this->app->runningInConsole()) {
+            // Kode yang berhubungan dengan database tidak dijalankan
+            return;
+        }
         // Retrieve contact data with its associated province, city, and district
         $contact = Contact::first();
 
